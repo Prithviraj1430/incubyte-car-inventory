@@ -10,7 +10,7 @@ from app.database import get_session
 from app.models import User
 from sqlalchemy import select
 
-from app.security import create_access_token
+from app.security import create_access_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 password_hasher = PasswordHash.recommended()
@@ -85,3 +85,10 @@ def login(
         )
 
     return TokenResponse(access_token=create_access_token(user.id))
+
+
+@router.get("/me", response_model=UserResponse)
+def get_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    return current_user
