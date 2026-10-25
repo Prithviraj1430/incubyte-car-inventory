@@ -504,3 +504,118 @@ def test_only_one_customer_can_buy_the_last_vehicle(
 
     inventory = client.get("/api/vehicles", headers=customer_headers).json()
     assert inventory[0]["quantity"] == 0
+
+
+def test_admin_can_restock_a_sold_out_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": 0},
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/restock",
+        headers=admin_headers,
+        json={"amount": 5},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 5
+    assert client.get(
+        "/api/vehicles", headers=admin_headers
+    ).json()[0]["quantity"] == 5
+
+
+def test_customer_cannot_restock(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    customer_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/restock",
+        headers=customer_headers,
+        json={"amount": 2},
+    )
+
+    assert response.status_code == 403
+
+
+def test_restock_requires_login(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/restock",
+        json={"amount": 2},
+    )
+
+    assert response.status_code == 401
+
+
+def test_restock_reports_unknown_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = client.post(
+        "/api/vehicles/999999/restock",
+        headers=admin_headers,
+        json={"amount": 2},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Vehicle not found"
+
+
+@pytest.mark.parametrize("amount", [0, -1, 1.5])
+def test_restock_rejects_invalid_amount(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    amount: int | float,
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/restock",
+        headers=admin_headers,
+        json={"amount": amount},
+    )
+
+    assert response.status_code == 422    
+
+def test_restock_adds_to_existing_quantity(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": 3},
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/restock",
+        headers=admin_headers,
+        json={"amount": 2},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 5
