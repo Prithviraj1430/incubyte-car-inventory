@@ -20,7 +20,7 @@ A responsive vehicle showroom and inventory manager built for the Incubyte TDD k
 | Auth | Argon2 via pwdlib, PyJWT |
 | UI | React, TypeScript, Vite, Tailwind CSS |
 | Tests | pytest, pytest-cov, Vitest, Testing Library |
-| Deployment | Multi-stage Docker image; Render web service with persistent disk |
+| Deployment | Not deployed; Dockerfile included for optional future deployment |
 
 `backend/app` holds API routes, models, security, and database configuration. `frontend/src` holds the UI and API client. The Vite development server proxies `/api` to FastAPI; the production image serves the built UI and API from one origin.
 
