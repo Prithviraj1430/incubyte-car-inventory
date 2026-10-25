@@ -27,6 +27,9 @@ class VehicleCreate(BaseModel):
     price: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     quantity: int = Field(ge=0, strict=True)
 
+class RestockRequest(BaseModel):
+    amount: int = Field(gt=0, strict=True)    
+
 
 class VehicleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -158,3 +161,24 @@ def purchase_vehicle(
     vehicle = session.get(Vehicle, vehicle_id)
     assert vehicle is not None
     return vehicle    
+
+@router.post("/{vehicle_id}/restock", response_model=VehicleResponse)
+def restock_vehicle(
+    vehicle_id: int,
+    details: RestockRequest,
+    session: Annotated[Session, Depends(get_session)],
+    admin: Annotated[User, Depends(require_admin)],
+) -> Vehicle:
+    result = session.execute(
+        update(Vehicle)
+        .where(Vehicle.id == vehicle_id)
+        .values(quantity=Vehicle.quantity + details.amount)
+    )
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    session.commit()
+    vehicle = session.get(Vehicle, vehicle_id)
+    assert vehicle is not None
+    return vehicle
