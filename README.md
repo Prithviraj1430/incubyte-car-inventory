@@ -1,4 +1,4 @@
-﻿# Auto Atelier â€” Car Dealership Inventory
+﻿# Auto Atelier” Car Dealership Inventory
 
 A responsive vehicle showroom and inventory manager built for the Incubyte TDD kata. Customers can register, browse, filter, and purchase vehicles. Administrators can also create, edit, delete, and restock listings. Inventory is stored in SQLite, and the API uses bearer tokens and role checks.
 
