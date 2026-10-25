@@ -1,13 +1,22 @@
 import { useState, type FormEvent } from 'react'
 
-import type { Account, Vehicle, VehicleInput } from './api'
+import type {
+  Account,
+  Vehicle,
+  VehicleFilters,
+  VehicleInput,
+} from './api'
+import SearchPanel from './SearchPanel'
 
 type DashboardProps = {
   account: Account
   vehicles: Vehicle[]
+  filtersActive: boolean
   onSignOut: () => void
   onAddVehicle: (details: VehicleInput) => Promise<void>
   onPurchase: (vehicleId: number) => Promise<void>
+  onSearch: (filters: VehicleFilters) => Promise<void>
+  onResetSearch: () => Promise<void>
 }
 
 const formatPrice = (price: string) =>
@@ -23,9 +32,12 @@ const inputClass =
 function Dashboard({
   account,
   vehicles,
+  filtersActive,
   onSignOut,
   onAddVehicle,
   onPurchase,
+  onSearch,
+  onResetSearch,
 }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -225,6 +237,8 @@ function Dashboard({
           </section>
         )}
 
+        <SearchPanel onSearch={onSearch} onReset={onResetSearch} />
+
         {purchaseError && (
           <p
             role="alert"
@@ -240,11 +254,14 @@ function Dashboard({
               ✦
             </div>
             <h2 className="font-serif text-3xl">
-              The showroom is getting ready
+              {filtersActive
+                ? 'No matching vehicles'
+                : 'The showroom is getting ready'}
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[#68757b]">
-              No vehicles are listed yet. Check back soon for the latest
-              additions.
+              {filtersActive
+                ? 'No vehicles match these filters. Try changing or clearing them.'
+                : 'No vehicles are listed yet. Check back soon for the latest additions.'}
             </p>
           </div>
         ) : (

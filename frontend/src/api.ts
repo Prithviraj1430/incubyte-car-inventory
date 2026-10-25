@@ -103,3 +103,31 @@ export async function purchaseVehicle(
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+export type VehicleFilters = {
+  make: string
+  model: string
+  category: string
+  minPrice: string
+  maxPrice: string
+}
+
+export async function searchVehicles(
+  token: string,
+  filters: VehicleFilters,
+): Promise<Vehicle[]> {
+  const params = new URLSearchParams()
+
+  if (filters.make) params.set('make', filters.make)
+  if (filters.model) params.set('model', filters.model)
+  if (filters.category) params.set('category', filters.category)
+  if (filters.minPrice) params.set('min_price', filters.minPrice)
+  if (filters.maxPrice) params.set('max_price', filters.maxPrice)
+
+  const query = params.toString()
+  const path = `/api/vehicles/search${query ? `?${query}` : ''}`
+
+  return request<Vehicle[]>(path, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}

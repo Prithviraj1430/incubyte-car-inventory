@@ -7,8 +7,10 @@ import {
   login,
   purchaseVehicle,
   register,
+  searchVehicles,
   type Account,
   type Vehicle,
+  type VehicleFilters,
   type VehicleInput,
 } from './api'
 import Dashboard from './Dashboard'
@@ -24,6 +26,7 @@ function App() {
   )
   const [account, setAccount] = useState<Account | null>(null)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [filtersActive, setFiltersActive] = useState(false)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   const [loading, setLoading] = useState(Boolean(token))
@@ -39,11 +42,13 @@ function App() {
         if (!active) return
         setAccount(currentAccount)
         setVehicles(inventory)
+        setFiltersActive(false)
       })
       .catch(() => {
         if (!active) return
         sessionStorage.removeItem('auth_token')
         setToken(null)
+        setAccount(null)
         setError('Your session expired. Please sign in again.')
       })
       .finally(() => {
@@ -90,8 +95,10 @@ function App() {
     setToken(null)
     setAccount(null)
     setVehicles([])
+    setFiltersActive(false)
     setError('')
   }
+
   async function addVehicle(details: VehicleInput): Promise<void> {
     if (!token) {
       throw new Error('Please sign in again.')
@@ -101,7 +108,7 @@ function App() {
     setVehicles((current) => [...current, created])
   }
 
-    async function handlePurchase(vehicleId: number): Promise<void> {
+  async function handlePurchase(vehicleId: number): Promise<void> {
     if (!token) {
       throw new Error('Please sign in again.')
     }
@@ -114,6 +121,25 @@ function App() {
     )
   }
 
+  async function handleSearch(filters: VehicleFilters): Promise<void> {
+    if (!token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const results = await searchVehicles(token, filters)
+    setVehicles(results)
+    setFiltersActive(true)
+  }
+
+  async function resetSearch(): Promise<void> {
+    if (!token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const inventory = await listVehicles(token)
+    setVehicles(inventory)
+    setFiltersActive(false)
+  }
 
   if (token && loading) {
     return (
@@ -126,16 +152,17 @@ function App() {
   if (account) {
     return (
       <Dashboard
-  account={account}
-  vehicles={vehicles}
-  onSignOut={signOut}
-  onAddVehicle={addVehicle}
-  onPurchase={handlePurchase}
-/>
+        account={account}
+        vehicles={vehicles}
+        filtersActive={filtersActive}
+        onSignOut={signOut}
+        onAddVehicle={addVehicle}
+        onPurchase={handlePurchase}
+        onSearch={handleSearch}
+        onResetSearch={resetSearch}
+      />
     )
   }
-
-  
 
   return (
     <div className="min-h-screen bg-[#eef0ed] p-3 text-[#172332] sm:p-6">
