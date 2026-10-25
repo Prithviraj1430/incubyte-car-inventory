@@ -123,3 +123,16 @@ def update_vehicle(
     session.commit()
     session.refresh(vehicle)
     return vehicle
+
+@router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_vehicle(
+    vehicle_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    admin: Annotated[User, Depends(require_admin)],
+) -> None:
+    vehicle = session.get(Vehicle, vehicle_id)
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    session.delete(vehicle)
+    session.commit()
