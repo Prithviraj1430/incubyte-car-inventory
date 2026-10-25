@@ -1,4 +1,4 @@
-# Auto Atelier — Car Dealership Inventory
+﻿# Auto Atelier â€” Car Dealership Inventory
 
 A responsive vehicle showroom and inventory manager built for the Incubyte TDD kata. Customers can register, browse, filter, and purchase vehicles. Administrators can also create, edit, delete, and restock listings. Inventory is stored in SQLite, and the API uses bearer tokens and role checks.
 
@@ -104,14 +104,14 @@ npm run build
 npm run lint
 ```
 
-See [TEST_REPORT.md](TEST_REPORT.md) for the verified results of this supplied snapshot. Backend tests use a temporary **file-backed** SQLite database. The test suite covers authorization, invalid input, inventory lifecycle, and two concurrent attempts to buy the last vehicle. Frontend tests cover registration, login, search, purchase, sold-out behavior, admin actions, and failure recovery. The commit history in your original Git repository records the Red–Green steps; copy these updated files into that repository without replacing its `.git` folder.
+See [TEST_REPORT.md](TEST_REPORT.md) for the verified results of this supplied snapshot. Backend tests use a temporary **file-backed** SQLite database. The test suite covers authorization, invalid input, inventory lifecycle, and two concurrent attempts to buy the last vehicle. Frontend tests cover registration, login, search, purchase, sold-out behavior, admin actions, and failure recovery. The commit history in your original Git repository records the Redâ€“Green steps; copy these updated files into that repository without replacing its `.git` folder.
 
 ## Deploy to Render
 
 This project uses **one paid Render web service with a persistent disk**. Render's free web service has an ephemeral filesystem; using it with SQLite would lose accounts and inventory on a restart or redeploy. Check the current Render pricing before creating a paid service. The frontend and API run on the same origin, so no CORS configuration or frontend API URL is needed.
 
 1. Push the repository to GitHub. Keep `.env`, `inventory.db`, `.venv`, and `node_modules` out of Git. Confirm the required submission documents and screenshots are present before sharing the repository.
-2. In Render, choose **New → Web Service**, connect the repository, select the **Docker** runtime and a paid compute plan, and leave the root directory at the repository root. The root `Dockerfile` builds the frontend and starts FastAPI on Render's `PORT`.
+2. In Render, choose **New â†’ Web Service**, connect the repository, select the **Docker** runtime and a paid compute plan, and leave the root directory at the repository root. The root `Dockerfile` builds the frontend and starts FastAPI on Render's `PORT`.
 3. In the service's disk settings, attach a persistent disk with mount path `/var/data`. Select an appropriate size for this small assessment project.
 4. Set environment variables `DATABASE_PATH=/var/data/inventory.db` and `JWT_SECRET=<a freshly generated long random value>`. Generate the secret locally with `python -c "import secrets; print(secrets.token_urlsafe(48))"`; paste only the value into Render's environment settings. Never put it in Git.
 5. Set the health check path to `/health` and deploy. Check `https://<your-service>.onrender.com/health`, then open the service's root URL to view the frontend.
@@ -124,13 +124,25 @@ Local accounts and inventory are not automatically copied to the deployed databa
 
 ## Screenshots
 
-Add screenshots of your running app to `docs/screenshots/` and replace these pending entries with actual image links before submission:
+### Welcome and sign in
 
-- Login or registration screen.
-- Customer inventory with search results and stock states.
-- Admin inventory with add, edit, and restock controls.
+![Auto Atelier login screen](docs/screenshots/login.png)
 
-See [screenshot instructions](docs/screenshots/README.md). Do not publish passwords, JWTs, or private account details in screenshots.
+### Customer inventory
+
+![Customer vehicle inventory](docs/screenshots/customer-inventory.png)
+
+### Purchase and stock update
+
+![Customer purchase view](docs/screenshots/customer-purchase.png)
+
+### Admin inventory
+
+![Administrator vehicle dashboard](docs/screenshots/admin.png)
+
+### Stock management
+
+![Administrator stock management](docs/screenshots/stock-management.png)
 
 ## My AI Usage
 
@@ -145,3 +157,4 @@ The assessment also requires **raw, unedited prompts or public chat links** in r
 - SQLite with a single persistent disk suits this assessment's small deployment; larger multi-instance deployments would need a shared database and migrations.
 - A paid Render service and disk may incur charges. Set a budget or remove the service when the assessment ends.
 - The app represents a purchase as an inventory decrement; it does not integrate payments or order history.
+
