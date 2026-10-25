@@ -603,3 +603,69 @@ it('asks for confirmation before an admin deletes a vehicle', async () => {
     }),
   )
 })
+
+
+it('lets an admin restock a sold-out vehicle', async () => {
+  const vehicle = {
+    id: 7,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 0,
+  }
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'admin-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([vehicle]))
+    .mockResolvedValueOnce(
+      jsonResponse({ ...vehicle, quantity: 5 }),
+    )
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'admin@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecureAdmin123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  expect(
+    await screen.findByRole('button', { name: 'Purchase' }),
+  ).toBeDisabled()
+
+  await user.click(
+    screen.getByRole('button', { name: 'Restock Tata Nexon' }),
+  )
+  await user.type(screen.getByLabelText('Restock amount'), '5')
+  await user.click(
+    screen.getByRole('button', { name: 'Confirm restock' }),
+  )
+
+  expect(await screen.findByText('5 in stock')).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: 'Purchase' }),
+  ).toBeEnabled()
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles/7/restock',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ amount: 5 }),
+    }),
+  )
+})
