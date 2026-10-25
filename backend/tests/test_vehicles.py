@@ -1,4 +1,6 @@
 from fastapi.testclient import TestClient
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 import pytest
 
 
@@ -473,3 +475,32 @@ def test_purchase_requires_login(
     response = client.post(f"/api/vehicles/{created['id']}/purchase")
 
     assert response.status_code == 401
+
+def test_only_one_customer_can_buy_the_last_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    customer_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": 1},
+    ).json()
+    purchase_url = f"/api/vehicles/{created['id']}/purchase"
+    start_together = Barrier(2)
+
+    def buy() -> int:
+        start_together.wait(timeout=10)
+        return client.post(
+            purchase_url,
+            headers=customer_headers,
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        attempts = [executor.submit(buy) for _ in range(2)]
+        statuses = [attempt.result(timeout=20) for attempt in attempts]
+
+    assert sorted(statuses) == [200, 409]
+
+    inventory = client.get("/api/vehicles", headers=customer_headers).json()
+    assert inventory[0]["quantity"] == 0

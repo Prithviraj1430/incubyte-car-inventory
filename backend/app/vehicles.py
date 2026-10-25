@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.database import get_session
@@ -136,3 +136,25 @@ def delete_vehicle(
 
     session.delete(vehicle)
     session.commit()
+
+@router.post("/{vehicle_id}/purchase", response_model=VehicleResponse)
+def purchase_vehicle(
+    vehicle_id: int,
+    session: Annotated[Session, Depends(get_session)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> Vehicle:
+    result = session.execute(
+        update(Vehicle)
+        .where(Vehicle.id == vehicle_id, Vehicle.quantity > 0)
+        .values(quantity=Vehicle.quantity - 1)
+    )
+
+    if result.rowcount == 0:
+        if session.get(Vehicle, vehicle_id) is None:
+            raise HTTPException(status_code=404, detail="Vehicle not found")
+        raise HTTPException(status_code=409, detail="Vehicle is sold out")
+
+    session.commit()
+    vehicle = session.get(Vehicle, vehicle_id)
+    assert vehicle is not None
+    return vehicle    
