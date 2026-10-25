@@ -1,9 +1,9 @@
-from sqlalchemy import String
+from decimal import Decimal
+
+from sqlalchemy import CheckConstraint, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from sqlalchemy import CheckConstraint, Numeric, String
-from decimal import Decimal
 
 class User(Base):
     __tablename__ = "users"

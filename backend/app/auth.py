@@ -3,13 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from pwdlib import PasswordHash
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models import User
-from sqlalchemy import select
-
 from app.security import create_access_token, get_current_user
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])

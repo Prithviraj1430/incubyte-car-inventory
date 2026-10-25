@@ -1,21 +1,15 @@
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models import User, Vehicle
-from app.security import get_current_user
-
-from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel, ConfigDict, Field
-
 from app.security import get_current_user, require_admin
-from fastapi import HTTPException, Query
-from sqlalchemy import func
+
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
 
 class VehicleCreate(BaseModel):

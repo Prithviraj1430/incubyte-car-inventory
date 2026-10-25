@@ -1,10 +1,10 @@
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Annotated
 
 import jwt
 from dotenv import load_dotenv
-from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

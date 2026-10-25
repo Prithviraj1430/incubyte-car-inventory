@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import {
+  ApiError,
   createVehicle,
   deleteVehicle,
   getCurrentUser,
@@ -33,12 +34,13 @@ function App() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   const [loading, setLoading] = useState(Boolean(token))
+  const [loadError, setLoadError] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
     if (!token) return
 
     let active = true
-    setLoading(true)
 
     Promise.all([getCurrentUser(token), listVehicles(token)])
       .then(([currentAccount, inventory]) => {
@@ -47,12 +49,16 @@ function App() {
         setVehicles(inventory)
         setFiltersActive(false)
       })
-      .catch(() => {
+      .catch((failure: unknown) => {
         if (!active) return
-        sessionStorage.removeItem('auth_token')
-        setToken(null)
-        setAccount(null)
-        setError('Your session expired. Please sign in again.')
+        if (failure instanceof ApiError && failure.status === 401) {
+          sessionStorage.removeItem('auth_token')
+          setToken(null)
+          setAccount(null)
+          setError('Your session expired. Please sign in again.')
+        } else {
+          setLoadError(failure instanceof Error ? failure.message : 'Could not load the showroom.')
+        }
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -61,7 +67,7 @@ function App() {
     return () => {
       active = false
     }
-  }, [token])
+  }, [token, loadAttempt])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -80,6 +86,7 @@ function App() {
 
       const accessToken = await login(email, password)
       sessionStorage.setItem('auth_token', accessToken)
+      setLoadError('')
       setLoading(true)
       setToken(accessToken)
     } catch (failure) {
@@ -100,6 +107,7 @@ function App() {
     setVehicles([])
     setFiltersActive(false)
     setError('')
+    setLoadError('')
   }
 
   async function addVehicle(details: VehicleInput): Promise<void> {
@@ -178,6 +186,21 @@ function App() {
       <div className="flex min-h-screen items-center justify-center bg-[#f2f3ef] text-[#23505a]">
         Loading your showroom…
       </div>
+    )
+  }
+
+  if (token && loadError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-[#f2f3ef] px-5 text-center text-[#172332]">
+        <h1 className="font-serif text-4xl">Showroom unavailable</h1>
+        <p role="alert" className="max-w-md text-[#68757b]">{loadError}</p>
+        <button type="button" onClick={() => {
+          setLoadError('')
+          setLoading(true)
+          setLoadAttempt((attempt) => attempt + 1)
+        }} className="rounded-xl bg-[#183d45] px-6 py-3 font-semibold text-white">Try again</button>
+        <button type="button" onClick={signOut} className="text-sm underline">Sign out</button>
+      </main>
     )
   }
 

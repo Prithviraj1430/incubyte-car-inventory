@@ -1,10 +1,12 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session
 
-DATABASE_FILE = Path(__file__).resolve().parent.parent / "inventory.db"
+DEFAULT_DATABASE_FILE = Path(__file__).resolve().parent.parent / "inventory.db"
+DATABASE_FILE = Path(os.getenv("DATABASE_PATH", str(DEFAULT_DATABASE_FILE)))
 engine = create_engine(
     f"sqlite:///{DATABASE_FILE.as_posix()}",
     connect_args={"check_same_thread": False},

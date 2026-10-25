@@ -15,6 +15,16 @@ export type Vehicle = {
 
 export type VehicleInput = Omit<Vehicle, 'id'>
 
+export class ApiError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   let response: Response
 
@@ -27,15 +37,23 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
   const data: unknown = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const message =
-      data &&
-      typeof data === 'object' &&
-      'detail' in data &&
-      typeof data.detail === 'string'
-        ? data.detail
-        : 'Something went wrong. Please try again.'
+    const detail = data && typeof data === 'object' && 'detail' in data
+      ? data.detail
+      : null
+    const fieldErrors = Array.isArray(detail)
+      ? detail.map((issue: unknown) => {
+          if (!issue || typeof issue !== 'object' || !('msg' in issue) || typeof issue.msg !== 'string') return ''
+          const location = 'loc' in issue && Array.isArray(issue.loc)
+            ? issue.loc.at(-1)
+            : null
+          return `${typeof location === 'string' ? `${location}: ` : ''}${issue.msg}`
+        }).filter(Boolean).join('; ')
+      : ''
+    const message = typeof detail === 'string'
+      ? detail
+      : fieldErrors || 'Something went wrong. Please try again.'
 
-    throw new Error(message)
+    throw new ApiError(message, response.status)
   }
 
   return data as T

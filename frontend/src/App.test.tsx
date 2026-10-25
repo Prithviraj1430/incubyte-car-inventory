@@ -48,6 +48,27 @@ afterEach(() => {
 })
 
 describe('authentication API', () => {
+  it('lets a signed-in user retry after a temporary inventory failure', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ access_token: 'retry-token', token_type: 'bearer' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 1, email: 'driver@example.com', role: 'customer' }))
+      .mockRejectedValueOnce(new Error('Network down'))
+      .mockResolvedValueOnce(jsonResponse({ id: 1, email: 'driver@example.com', role: 'customer' }))
+      .mockResolvedValueOnce(jsonResponse([]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(screen.getByLabelText('Email address'), 'driver@example.com')
+    await user.type(screen.getByLabelText('Password'), 'SecurePass123!')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(sessionStorage.getItem('auth_token')).toBe('retry-token')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { name: 'Available vehicles' })).toBeInTheDocument()
+  })
+
   it('signs in and opens the inventory', async () => {
     const fetchMock = vi
       .fn()
