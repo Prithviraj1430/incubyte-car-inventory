@@ -472,3 +472,68 @@ it('sends inclusive price filters to the search API', async () => {
     )
   })
 })
+
+it('lets an admin edit a vehicle', async () => {
+  const vehicle = {
+    id: 7,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 3,
+  }
+  const updated = { ...vehicle, price: '1399999.00' }
+
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'admin-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([vehicle]))
+    .mockResolvedValueOnce(jsonResponse(updated))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'admin@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecureAdmin123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  await user.click(
+    await screen.findByRole('button', { name: 'Edit Tata Nexon' }),
+  )
+
+  const price = screen.getByLabelText('Edit price')
+  await user.clear(price)
+  await user.type(price, '1399999.00')
+  await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+  expect(await screen.findByText('₹13,99,999')).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles/7',
+    expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({
+        make: 'Tata',
+        model: 'Nexon',
+        category: 'SUV',
+        price: '1399999.00',
+        quantity: 3,
+      }),
+    }),
+  )
+})
