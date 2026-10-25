@@ -117,3 +117,86 @@ def test_admin_cannot_add_invalid_vehicle(
     )
 
     assert response.status_code == 422    
+
+def test_search_requires_login(client: TestClient) -> None:
+    response = client.get("/api/vehicles/search?make=Tata")
+
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("filters", "expected_models"),
+    [
+        ({"make": "tAtA"}, ["Nexon"]),
+        ({"model": "nEx"}, ["Nexon"]),
+        ({"category": "sUv"}, ["Nexon", "Thar"]),
+        (
+            {"min_price": "1499999.00", "max_price": "1800000.00"},
+            ["Nexon", "Thar"],
+        ),
+        (
+            {"category": "SUV", "max_price": "1499999.00"},
+            ["Nexon"],
+        ),
+    ],
+)
+def test_search_filters_vehicles(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    filters: dict[str, str],
+    expected_models: list[str],
+) -> None:
+    vehicles = [
+        VALID_VEHICLE,
+        {
+            "make": "Hyundai",
+            "model": "i20",
+            "category": "Hatchback",
+            "price": "800000.00",
+            "quantity": 2,
+        },
+        {
+            "make": "Mahindra",
+            "model": "Thar",
+            "category": "SUV",
+            "price": "1800000.00",
+            "quantity": 1,
+        },
+    ]
+    for vehicle in vehicles:
+        created = client.post(
+            "/api/vehicles",
+            headers=admin_headers,
+            json=vehicle,
+        )
+        assert created.status_code == 201
+
+    response = client.get(
+        "/api/vehicles/search",
+        headers=admin_headers,
+        params=filters,
+    )
+
+    assert response.status_code == 200
+    assert [vehicle["model"] for vehicle in response.json()] == expected_models
+
+
+@pytest.mark.parametrize(
+    "filters",
+    [
+        {"min_price": "-1"},
+        {"min_price": "2000000", "max_price": "1000000"},
+    ],
+)
+def test_search_rejects_invalid_price_range(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    filters: dict[str, str],
+) -> None:
+    response = client.get(
+        "/api/vehicles/search",
+        headers=admin_headers,
+        params=filters,
+    )
+
+    assert response.status_code == 422    
