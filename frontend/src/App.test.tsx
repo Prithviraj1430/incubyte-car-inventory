@@ -245,3 +245,109 @@ it('lets an admin add a vehicle from the dashboard', async () => {
     }),
   )
 })
+
+
+it('purchases an available vehicle and updates its stock', async () => {
+  const vehicle = {
+    id: 7,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 1,
+  }
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'customer-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 2,
+        email: 'driver@example.com',
+        role: 'customer',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([vehicle]))
+    .mockResolvedValueOnce(
+      jsonResponse({ ...vehicle, quantity: 0 }),
+    )
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'driver@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecurePass123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  const purchaseButton = await screen.findByRole('button', {
+    name: 'Purchase',
+  })
+  await user.click(purchaseButton)
+
+  expect(await screen.findByText('Sold out')).toBeInTheDocument()
+  expect(purchaseButton).toBeDisabled()
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles/7/purchase',
+    expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer customer-token',
+      }),
+    }),
+  )
+})
+
+it('does not allow purchasing a sold-out vehicle', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'customer-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 2,
+        email: 'driver@example.com',
+        role: 'customer',
+      }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse([
+        {
+          id: 7,
+          make: 'Tata',
+          model: 'Nexon',
+          category: 'SUV',
+          price: '1499999.00',
+          quantity: 0,
+        },
+      ]),
+    )
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'driver@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecurePass123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  expect(
+    await screen.findByRole('button', { name: 'Purchase' }),
+  ).toBeDisabled()
+  expect(screen.getByText('Sold out')).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+})
