@@ -106,22 +106,6 @@ npm run lint
 
 See [TEST_REPORT.md](TEST_REPORT.md) for the verified results of this supplied snapshot. Backend tests use a temporary **file-backed** SQLite database. The test suite covers authorization, invalid input, inventory lifecycle, and two concurrent attempts to buy the last vehicle. Frontend tests cover registration, login, search, purchase, sold-out behavior, admin actions, and failure recovery. The commit history in your original Git repository records the Redâ€“Green steps; copy these updated files into that repository without replacing its `.git` folder.
 
-## Deploy to Render
-
-This project uses **one paid Render web service with a persistent disk**. Render's free web service has an ephemeral filesystem; using it with SQLite would lose accounts and inventory on a restart or redeploy. Check the current Render pricing before creating a paid service. The frontend and API run on the same origin, so no CORS configuration or frontend API URL is needed.
-
-1. Push the repository to GitHub. Keep `.env`, `inventory.db`, `.venv`, and `node_modules` out of Git. Confirm the required submission documents and screenshots are present before sharing the repository.
-2. In Render, choose **New â†’ Web Service**, connect the repository, select the **Docker** runtime and a paid compute plan, and leave the root directory at the repository root. The root `Dockerfile` builds the frontend and starts FastAPI on Render's `PORT`.
-3. In the service's disk settings, attach a persistent disk with mount path `/var/data`. Select an appropriate size for this small assessment project.
-4. Set environment variables `DATABASE_PATH=/var/data/inventory.db` and `JWT_SECRET=<a freshly generated long random value>`. Generate the secret locally with `python -c "import secrets; print(secrets.token_urlsafe(48))"`; paste only the value into Render's environment settings. Never put it in Git.
-5. Set the health check path to `/health` and deploy. Check `https://<your-service>.onrender.com/health`, then open the service's root URL to view the frontend.
-6. Open the **Shell on the running paid web service** and run `cd /app/backend && python -m app.admin`. Use an unused email and a strong password. The shell must be attached to the live service with its persistent disk; a build command, pre-deploy command, or separate one-off job does not have access to that disk.
-7. Verify admin login, vehicle creation, customer registration, search, purchase, and stock after a redeploy. Record the live URL in this README once it works.
-
-Local accounts and inventory are not automatically copied to the deployed database. Create a fresh admin on the deployed service.
-
-**Live application:** add your verified Render URL here before submitting.
-
 ## Screenshots
 
 ### Welcome and sign in
@@ -148,9 +132,8 @@ Local accounts and inventory are not automatically copied to the deployed databa
 
 I used **ChatGPT** during planning, implementation, debugging, tests, and documentation. It helped draft FastAPI models and routes, SQLAlchemy queries, JWT and role checks, React components, interaction tests, and a deployment approach. It also helped review test failures and create the showroom image. I ran tests in failing and passing states during development, inspected the resulting behavior, and adapted the code to the project requirements.
 
-AI sped up boilerplate and helped me reason through unfamiliar integration details. The most useful checks were the test failures, the concurrent purchase case, and exercising the UI against the actual API. I remain responsible for reviewing the generated code, testing its behavior, and explaining its limitations. Commits containing AI-assisted changes include the required ChatGPT co-author trailer. Add any other AI tools you actually used before submission.
+AI sped up boilerplate and helped me reason through unfamiliar integration details. The most useful checks were the test failures, the concurrent purchase case, and exercising the UI against the actual API. I remain responsible for reviewing the generated code, testing its behavior, and explaining its limitations. Commits containing AI-assisted changes include the required ChatGPT co-author trailer. 
 
-The assessment also requires **raw, unedited prompts or public chat links** in root [PROMPTS.md](PROMPTS.md). Replace its outstanding checklist with your actual exported conversation text or share links. Do not submit a summary in place of the raw record.
 
 ## Limitations
 
