@@ -71,3 +71,26 @@ def admin_headers(client: TestClient, test_engine: Engine) -> dict[str, str]:
     assert login.status_code == 200
 
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+@pytest.fixture
+def customer_headers(client: TestClient) -> dict[str, str]:
+    registration = client.post(
+        "/api/auth/register",
+        json={
+            "email": "customer@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+    assert registration.status_code == 201
+
+    login = client.post(
+        "/api/auth/login",
+        json={
+            "email": "customer@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+    assert login.status_code == 200
+
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}

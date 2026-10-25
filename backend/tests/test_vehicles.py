@@ -401,3 +401,75 @@ def test_delete_reports_unknown_vehicle(
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Vehicle not found"
+
+def test_customer_purchase_decreases_stock(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    customer_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": 2},
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/purchase",
+        headers=customer_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quantity"] == 1
+
+    inventory = client.get("/api/vehicles", headers=customer_headers).json()
+    assert inventory[0]["quantity"] == 1
+
+
+def test_purchase_rejects_sold_out_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    customer_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": 0},
+    ).json()
+
+    response = client.post(
+        f"/api/vehicles/{created['id']}/purchase",
+        headers=customer_headers,
+    )
+
+    assert response.status_code == 409
+    assert client.get(
+        "/api/vehicles", headers=customer_headers
+    ).json()[0]["quantity"] == 0
+
+
+def test_purchase_reports_unknown_vehicle(
+    client: TestClient,
+    customer_headers: dict[str, str],
+) -> None:
+    response = client.post(
+        "/api/vehicles/999999/purchase",
+        headers=customer_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Vehicle not found"
+
+
+def test_purchase_requires_login(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.post(f"/api/vehicles/{created['id']}/purchase")
+
+    assert response.status_code == 401
