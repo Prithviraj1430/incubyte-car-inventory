@@ -200,3 +200,122 @@ def test_search_rejects_invalid_price_range(
     )
 
     assert response.status_code == 422    
+
+def test_admin_can_update_a_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    changes = {
+        **VALID_VEHICLE,
+        "category": "Crossover",
+        "price": "1399999.50",
+        "quantity": 5,
+    }
+    response = client.put(
+        f"/api/vehicles/{created['id']}",
+        headers=admin_headers,
+        json=changes,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == created["id"]
+    assert response.json()["category"] == "Crossover"
+    assert response.json()["price"] == "1399999.50"
+    assert response.json()["quantity"] == 5
+
+    inventory = client.get("/api/vehicles", headers=admin_headers).json()
+    assert inventory == [response.json()]
+
+
+def test_customer_cannot_update_a_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    client.post(
+        "/api/auth/register",
+        json={
+            "email": "driver@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+    login = client.post(
+        "/api/auth/login",
+        json={
+            "email": "driver@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+    customer_headers = {
+        "Authorization": f"Bearer {login.json()['access_token']}"
+    }
+
+    response = client.put(
+        f"/api/vehicles/{created['id']}",
+        headers=customer_headers,
+        json=VALID_VEHICLE,
+    )
+
+    assert response.status_code == 403
+
+
+def test_update_requires_login(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.put(
+        f"/api/vehicles/{created['id']}",
+        json=VALID_VEHICLE,
+    )
+
+    assert response.status_code == 401
+
+
+def test_update_reports_unknown_vehicle(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = client.put(
+        "/api/vehicles/999999",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Vehicle not found"
+
+
+def test_update_rejects_invalid_quantity(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    created = client.post(
+        "/api/vehicles",
+        headers=admin_headers,
+        json=VALID_VEHICLE,
+    ).json()
+
+    response = client.put(
+        f"/api/vehicles/{created['id']}",
+        headers=admin_headers,
+        json={**VALID_VEHICLE, "quantity": -1},
+    )
+
+    assert response.status_code == 422
