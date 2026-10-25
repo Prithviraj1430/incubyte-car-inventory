@@ -1,7 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-
 import App from './App'
 
 describe('authentication screen', () => {
@@ -350,4 +349,126 @@ it('does not allow purchasing a sold-out vehicle', async () => {
   ).toBeDisabled()
   expect(screen.getByText('Sold out')).toBeInTheDocument()
   expect(fetchMock).toHaveBeenCalledTimes(3)
+})
+
+it('searches vehicles by make through the API', async () => {
+  const tata = {
+    id: 1,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 3,
+  }
+  const hyundai = {
+    id: 2,
+    make: 'Hyundai',
+    model: 'i20',
+    category: 'Hatchback',
+    price: '800000.00',
+    quantity: 2,
+  }
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'customer-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 2,
+        email: 'driver@example.com',
+        role: 'customer',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([tata, hyundai]))
+    .mockResolvedValueOnce(jsonResponse([tata]))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'driver@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecurePass123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  expect(
+    await screen.findByRole('heading', { name: 'Hyundai i20' }),
+  ).toBeInTheDocument()
+
+  await user.type(screen.getByLabelText('Search make'), 'Tata')
+  await user.click(
+    screen.getByRole('button', { name: 'Search vehicles' }),
+  )
+
+  await waitFor(() => {
+    expect(
+      screen.queryByRole('heading', { name: 'Hyundai i20' }),
+    ).not.toBeInTheDocument()
+  })
+  expect(
+    screen.getByRole('heading', { name: 'Tata Nexon' }),
+  ).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles/search?make=Tata',
+    expect.objectContaining({
+      headers: expect.objectContaining({
+        Authorization: 'Bearer customer-token',
+      }),
+    }),
+  )
+})
+
+it('sends inclusive price filters to the search API', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'customer-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 2,
+        email: 'driver@example.com',
+        role: 'customer',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([]))
+    .mockResolvedValueOnce(jsonResponse([]))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'driver@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecurePass123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  await screen.findByRole('heading', { name: 'Available vehicles' })
+  await user.type(screen.getByLabelText('Minimum price'), '900000')
+  await user.type(screen.getByLabelText('Maximum price'), '1500000')
+  await user.click(
+    screen.getByRole('button', { name: 'Search vehicles' }),
+  )
+
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/vehicles/search?min_price=900000&max_price=1500000',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer customer-token',
+        }),
+      }),
+    )
+  })
 })
