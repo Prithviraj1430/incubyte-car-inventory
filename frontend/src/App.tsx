@@ -1,10 +1,112 @@
-import { useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+
+import {
+  getCurrentUser,
+  listVehicles,
+  login,
+  register,
+  type Account,
+  type Vehicle,
+} from './api'
+import Dashboard from './Dashboard'
 
 type AuthMode = 'login' | 'register'
 
 function App() {
   const [mode, setMode] = useState<AuthMode>('login')
   const isRegistering = mode === 'register'
+
+  const [token, setToken] = useState<string | null>(
+    () => sessionStorage.getItem('auth_token'),
+  )
+  const [account, setAccount] = useState<Account | null>(null)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [error, setError] = useState('')
+  const [pending, setPending] = useState(false)
+  const [loading, setLoading] = useState(Boolean(token))
+
+  useEffect(() => {
+    if (!token) return
+
+    let active = true
+    setLoading(true)
+
+    Promise.all([getCurrentUser(token), listVehicles(token)])
+      .then(([currentAccount, inventory]) => {
+        if (!active) return
+        setAccount(currentAccount)
+        setVehicles(inventory)
+      })
+      .catch(() => {
+        if (!active) return
+        sessionStorage.removeItem('auth_token')
+        setToken(null)
+        setError('Your session expired. Please sign in again.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [token])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const fields = new FormData(event.currentTarget)
+    const email = String(fields.get('email') ?? '').trim()
+    const password = String(fields.get('password') ?? '')
+
+    setError('')
+    setPending(true)
+
+    try {
+      if (isRegistering) {
+        await register(email, password)
+      }
+
+      const accessToken = await login(email, password)
+      sessionStorage.setItem('auth_token', accessToken)
+      setLoading(true)
+      setToken(accessToken)
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : 'Something went wrong. Please try again.',
+      )
+    } finally {
+      setPending(false)
+    }
+  }
+
+  function signOut() {
+    sessionStorage.removeItem('auth_token')
+    setToken(null)
+    setAccount(null)
+    setVehicles([])
+    setError('')
+  }
+
+  if (token && loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f2f3ef] text-[#23505a]">
+        Loading your showroom…
+      </div>
+    )
+  }
+
+  if (account) {
+    return (
+      <Dashboard
+        account={account}
+        vehicles={vehicles}
+        onSignOut={signOut}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#eef0ed] p-3 text-[#172332] sm:p-6">
@@ -46,12 +148,12 @@ function App() {
 
           <div className="relative z-10 mt-auto pt-14">
             <div className="h-[300px] w-full overflow-hidden rounded-2xl bg-[#142a37]">
-  <img
-    src="/showroom-hero.png"
-    alt="Contemporary crossover in a dark studio"
-    className="h-full w-full object-cover object-[center_60%]"
-  />
-</div>
+              <img
+                src="/showroom-hero.png"
+                alt="Contemporary crossover in a dark studio"
+                className="h-full w-full object-cover object-[center_60%]"
+              />
+            </div>
             <div className="mt-7 flex items-center justify-between border-t border-white/15 pt-6 text-xs text-white/55">
               <span>CURATED CARS. CLEAR CHOICES.</span>
               <span>EST. 2026</span>
@@ -69,7 +171,7 @@ function App() {
             </span>
           </div>
 
-          <div className="my-auto w-full max-w-[420px] self-center py-16">
+          <div className="my-auto w-full max-w-[420px] self-center py-8 sm:py-12 lg:py-16">
             <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e8ece9] text-xl text-[#1c414a]">
               ✦
             </div>
@@ -85,10 +187,16 @@ function App() {
                 : 'Sign in to explore the collection and manage your next move.'}
             </p>
 
-            <form
-              className="mt-9 space-y-5"
-              onSubmit={(event) => event.preventDefault()}
-            >
+            {error && (
+              <p
+                role="alert"
+                className="mt-6 rounded-xl border border-[#edc9bd] bg-[#fff1ec] px-4 py-3 text-sm text-[#994d36]"
+              >
+                {error}
+              </p>
+            )}
+
+            <form className="mt-9 space-y-5" onSubmit={handleSubmit}>
               <div>
                 <label
                   className="mb-2 block text-sm font-semibold"
@@ -106,6 +214,7 @@ function App() {
                   className="w-full rounded-xl border border-[#dce2de] bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[#315d61] focus:ring-4 focus:ring-[#315d61]/10"
                 />
               </div>
+
               <div>
                 <label
                   className="mb-2 block text-sm font-semibold"
@@ -131,24 +240,36 @@ function App() {
                   </p>
                 )}
               </div>
+
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#183d45] px-5 py-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(24,61,69,0.16)] transition hover:bg-[#285761] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#183d45]"
+                disabled={pending}
+                className="w-full rounded-xl bg-[#183d45] px-5 py-4 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(24,61,69,0.16)] transition hover:bg-[#285761] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#183d45] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isRegistering ? 'Register' : 'Sign in'}
+                {pending
+                  ? isRegistering
+                    ? 'Creating account…'
+                    : 'Signing in…'
+                  : isRegistering
+                    ? 'Register'
+                    : 'Sign in'}
               </button>
             </form>
 
             <div className="mt-8 flex items-center gap-4">
               <span className="h-px flex-1 bg-[#e0e5e1]" />
-              <span className="text-xs text-[#93a09e]">
+              <span className="text-xs text-[#93a09f]">
                 {isRegistering ? 'Already a member?' : 'New to the showroom?'}
               </span>
               <span className="h-px flex-1 bg-[#e0e5e1]" />
             </div>
+
             <button
               type="button"
-              onClick={() => setMode(isRegistering ? 'login' : 'register')}
+              onClick={() => {
+                setMode(isRegistering ? 'login' : 'register')
+                setError('')
+              }}
               className="mt-5 w-full rounded-xl border border-[#dce2de] bg-white px-5 py-3.5 text-sm font-semibold text-[#24434b] transition hover:border-[#8eaaa9] hover:bg-[#f2f6f3]"
             >
               {isRegistering ? 'Back to sign in' : 'Create account'}
