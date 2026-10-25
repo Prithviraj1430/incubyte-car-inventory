@@ -7,6 +7,7 @@ type DashboardProps = {
   vehicles: Vehicle[]
   onSignOut: () => void
   onAddVehicle: (details: VehicleInput) => Promise<void>
+  onPurchase: (vehicleId: number) => Promise<void>
 }
 
 const formatPrice = (price: string) =>
@@ -24,10 +25,32 @@ function Dashboard({
   vehicles,
   onSignOut,
   onAddVehicle,
+  onPurchase,
 }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [purchasePendingId, setPurchasePendingId] = useState<number | null>(
+    null,
+  )
+  const [purchaseError, setPurchaseError] = useState('')
+
+  async function purchase(vehicleId: number) {
+    setPurchaseError('')
+    setPurchasePendingId(vehicleId)
+
+    try {
+      await onPurchase(vehicleId)
+    } catch (failure) {
+      setPurchaseError(
+        failure instanceof Error
+          ? failure.message
+          : 'Could not complete the purchase.',
+      )
+    } finally {
+      setPurchasePendingId(null)
+    }
+  }
 
   async function submitVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -202,6 +225,15 @@ function Dashboard({
           </section>
         )}
 
+        {purchaseError && (
+          <p
+            role="alert"
+            className="mb-6 rounded-xl border border-[#edc9bd] bg-[#fff1ec] px-4 py-3 text-sm text-[#994d36]"
+          >
+            {purchaseError}
+          </p>
+        )}
+
         {vehicles.length === 0 ? (
           <div className="rounded-[28px] border border-[#dce2de] bg-white px-8 py-20 text-center">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e9efec] text-2xl">
@@ -240,6 +272,19 @@ function Dashboard({
                       ? 'Sold out'
                       : `${vehicle.quantity} in stock`}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => void purchase(vehicle.id)}
+                    disabled={
+                      vehicle.quantity === 0 ||
+                      purchasePendingId === vehicle.id
+                    }
+                    className="mt-5 w-full rounded-xl bg-[#183d45] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#285761] disabled:cursor-not-allowed disabled:bg-[#dce2de] disabled:text-[#68757b]"
+                  >
+                    {purchasePendingId === vehicle.id
+                      ? 'Processing…'
+                      : 'Purchase'}
+                  </button>
                 </div>
               </article>
             ))}

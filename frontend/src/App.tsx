@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   listVehicles,
   login,
+  purchaseVehicle,
   register,
   type Account,
   type Vehicle,
@@ -100,6 +101,18 @@ function App() {
     setVehicles((current) => [...current, created])
   }
 
+    async function handlePurchase(vehicleId: number): Promise<void> {
+    if (!token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const updated = await purchaseVehicle(token, vehicleId)
+    setVehicles((current) =>
+      current.map((vehicle) =>
+        vehicle.id === vehicleId ? updated : vehicle,
+      ),
+    )
+  }
 
 
   if (token && loading) {
@@ -117,9 +130,12 @@ function App() {
   vehicles={vehicles}
   onSignOut={signOut}
   onAddVehicle={addVehicle}
+  onPurchase={handlePurchase}
 />
     )
   }
+
+  
 
   return (
     <div className="min-h-screen bg-[#eef0ed] p-3 text-[#172332] sm:p-6">

@@ -93,3 +93,13 @@ export async function createVehicle(
     body: JSON.stringify(details),
   })
 }
+
+export async function purchaseVehicle(
+  token: string,
+  vehicleId: number,
+): Promise<Vehicle> {
+  return request<Vehicle>(`/api/vehicles/${vehicleId}/purchase`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
