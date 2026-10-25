@@ -156,3 +156,18 @@ export async function deleteVehicle(
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+export async function restockVehicle(
+  token: string,
+  vehicleId: number,
+  amount: number,
+): Promise<Vehicle> {
+  return request<Vehicle>(`/api/vehicles/${vehicleId}/restock`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount }),
+  })
+}

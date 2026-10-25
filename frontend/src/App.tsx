@@ -8,6 +8,7 @@ import {
   login,
   purchaseVehicle,
   register,
+  restockVehicle,
   searchVehicles,
   updateVehicle,
   type Account,
@@ -142,6 +143,20 @@ function App() {
     )
   }
 
+  async function handleRestockVehicle(
+    vehicleId: number,
+    amount: number,
+  ): Promise<void> {
+    if (!token) throw new Error('Please sign in again.')
+
+    const updated = await restockVehicle(token, vehicleId, amount)
+    setVehicles((current) =>
+      current.map((vehicle) =>
+        vehicle.id === vehicleId ? updated : vehicle,
+      ),
+    )
+  }
+
   async function handleSearch(filters: VehicleFilters): Promise<void> {
     if (!token) throw new Error('Please sign in again.')
 
@@ -175,6 +190,7 @@ function App() {
         onSignOut={signOut}
         onAddVehicle={addVehicle}
         onPurchase={handlePurchase}
+        onRestockVehicle={handleRestockVehicle}
         onSearch={handleSearch}
         onResetSearch={resetSearch}
         onUpdateVehicle={handleUpdateVehicle}

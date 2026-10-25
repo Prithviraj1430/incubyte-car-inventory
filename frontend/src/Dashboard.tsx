@@ -6,6 +6,7 @@ import type {
   VehicleFilters,
   VehicleInput,
 } from './api'
+import RestockForm from './RestockForm'
 import SearchPanel from './SearchPanel'
 import VehicleEditForm from './VehicleEditForm'
 
@@ -16,6 +17,10 @@ type DashboardProps = {
   onSignOut: () => void
   onAddVehicle: (details: VehicleInput) => Promise<void>
   onPurchase: (vehicleId: number) => Promise<void>
+  onRestockVehicle: (
+    vehicleId: number,
+    amount: number,
+  ) => Promise<void>
   onSearch: (filters: VehicleFilters) => Promise<void>
   onResetSearch: () => Promise<void>
   onUpdateVehicle: (
@@ -42,6 +47,7 @@ function Dashboard({
   onSignOut,
   onAddVehicle,
   onPurchase,
+  onRestockVehicle,
   onSearch,
   onResetSearch,
   onUpdateVehicle,
@@ -55,6 +61,7 @@ function Dashboard({
   )
   const [purchaseError, setPurchaseError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [restockingId, setRestockingId] = useState<number | null>(null)
   const [deleteCandidateId, setDeleteCandidateId] = useState<number | null>(
     null,
   )
@@ -354,6 +361,27 @@ function Dashboard({
                       }
                       onCancel={() => setEditingId(null)}
                     />
+                  )}
+
+                  {account.role === 'admin' && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Restock ${vehicle.make} ${vehicle.model}`}
+                        onClick={() => setRestockingId(vehicle.id)}
+                        className="mt-3 w-full rounded-xl border border-[#dce2de] px-5 py-3 text-sm font-semibold text-[#24434b] hover:bg-[#f2f6f3]"
+                      >
+                        Restock
+                      </button>
+                      {restockingId === vehicle.id && (
+                        <RestockForm
+                          onRestock={(amount) =>
+                            onRestockVehicle(vehicle.id, amount)
+                          }
+                          onCancel={() => setRestockingId(null)}
+                        />
+                      )}
+                    </>
                   )}
 
                   {account.role === 'admin' && (
