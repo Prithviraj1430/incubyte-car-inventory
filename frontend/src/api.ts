@@ -131,3 +131,18 @@ export async function searchVehicles(
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+export async function updateVehicle(
+  token: string,
+  vehicleId: number,
+  details: VehicleInput,
+): Promise<Vehicle> {
+  return request<Vehicle>(`/api/vehicles/${vehicleId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(details),
+  })
+}

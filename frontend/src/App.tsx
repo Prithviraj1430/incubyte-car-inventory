@@ -8,6 +8,7 @@ import {
   purchaseVehicle,
   register,
   searchVehicles,
+  updateVehicle,
   type Account,
   type Vehicle,
   type VehicleFilters,
@@ -108,6 +109,20 @@ function App() {
     setVehicles((current) => [...current, created])
   }
 
+    async function handleUpdateVehicle(
+    vehicleId: number,
+    details: VehicleInput,
+  ): Promise<void> {
+    if (!token) throw new Error('Please sign in again.')
+
+    const updated = await updateVehicle(token, vehicleId, details)
+    setVehicles((current) =>
+      current.map((vehicle) =>
+        vehicle.id === vehicleId ? updated : vehicle,
+      ),
+    )
+  }
+
   async function handlePurchase(vehicleId: number): Promise<void> {
     if (!token) {
       throw new Error('Please sign in again.')
@@ -160,6 +175,7 @@ function App() {
         onPurchase={handlePurchase}
         onSearch={handleSearch}
         onResetSearch={resetSearch}
+        onUpdateVehicle={handleUpdateVehicle}
       />
     )
   }

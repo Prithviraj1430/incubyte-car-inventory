@@ -7,6 +7,7 @@ import type {
   VehicleInput,
 } from './api'
 import SearchPanel from './SearchPanel'
+import VehicleEditForm from './VehicleEditForm'
 
 type DashboardProps = {
   account: Account
@@ -17,6 +18,10 @@ type DashboardProps = {
   onPurchase: (vehicleId: number) => Promise<void>
   onSearch: (filters: VehicleFilters) => Promise<void>
   onResetSearch: () => Promise<void>
+  onUpdateVehicle: (
+    vehicleId: number,
+    details: VehicleInput,
+  ) => Promise<void>
 }
 
 const formatPrice = (price: string) =>
@@ -38,6 +43,7 @@ function Dashboard({
   onPurchase,
   onSearch,
   onResetSearch,
+  onUpdateVehicle,
 }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -46,6 +52,7 @@ function Dashboard({
     null,
   )
   const [purchaseError, setPurchaseError] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   async function purchase(vehicleId: number) {
     setPurchaseError('')
@@ -302,6 +309,27 @@ function Dashboard({
                       ? 'Processing…'
                       : 'Purchase'}
                   </button>
+
+                  {account.role === 'admin' && (
+                    <button
+                      type="button"
+                      aria-label={`Edit ${vehicle.make} ${vehicle.model}`}
+                      onClick={() => setEditingId(vehicle.id)}
+                      className="mt-3 w-full rounded-xl border border-[#dce2de] px-5 py-3 text-sm font-semibold text-[#24434b] hover:bg-[#f2f6f3]"
+                    >
+                      Edit
+                    </button>
+                  )}
+
+                  {editingId === vehicle.id && (
+                    <VehicleEditForm
+                      vehicle={vehicle}
+                      onSave={(details) =>
+                        onUpdateVehicle(vehicle.id, details)
+                      }
+                      onCancel={() => setEditingId(null)}
+                    />
+                  )}
                 </div>
               </article>
             ))}
