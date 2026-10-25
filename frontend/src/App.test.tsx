@@ -537,3 +537,69 @@ it('lets an admin edit a vehicle', async () => {
     }),
   )
 })
+
+
+it('asks for confirmation before an admin deletes a vehicle', async () => {
+  const vehicle = {
+    id: 7,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 3,
+  }
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'admin-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([vehicle]))
+    .mockResolvedValueOnce(jsonResponse(null, 204))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'admin@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecureAdmin123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  await user.click(
+    await screen.findByRole('button', { name: 'Delete Tata Nexon' }),
+  )
+  expect(
+    screen.getByRole('heading', { name: 'Tata Nexon' }),
+  ).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', { name: 'Confirm delete' }),
+  )
+
+  await waitFor(() => {
+    expect(
+      screen.queryByRole('heading', { name: 'Tata Nexon' }),
+    ).not.toBeInTheDocument()
+  })
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles/7',
+    expect.objectContaining({
+      method: 'DELETE',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer admin-token',
+      }),
+    }),
+  )
+})
