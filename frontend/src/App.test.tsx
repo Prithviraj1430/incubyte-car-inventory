@@ -178,3 +178,70 @@ describe('authentication API', () => {
     )
   })
 })
+
+
+it('lets an admin add a vehicle from the dashboard', async () => {
+  const vehicle = {
+    id: 1,
+    make: 'Tata',
+    model: 'Nexon',
+    category: 'SUV',
+    price: '1499999.00',
+    quantity: 3,
+  }
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      jsonResponse({ access_token: 'admin-token', token_type: 'bearer' }),
+    )
+    .mockResolvedValueOnce(
+      jsonResponse({
+        id: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+      }),
+    )
+    .mockResolvedValueOnce(jsonResponse([]))
+    .mockResolvedValueOnce(jsonResponse(vehicle, 201))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const user = userEvent.setup()
+  render(<App />)
+
+  await user.type(
+    screen.getByLabelText('Email address'),
+    'admin@example.com',
+  )
+  await user.type(
+    screen.getByLabelText('Password'),
+    'SecureAdmin123!',
+  )
+  await user.click(screen.getByRole('button', { name: 'Sign in' }))
+
+  await user.click(
+    await screen.findByRole('button', { name: 'Add vehicle' }),
+  )
+  await user.type(screen.getByLabelText('Make'), 'Tata')
+  await user.type(screen.getByLabelText('Model'), 'Nexon')
+  await user.type(screen.getByLabelText('Category'), 'SUV')
+  await user.type(screen.getByLabelText('Price'), '1499999.00')
+  await user.type(screen.getByLabelText('Quantity'), '3')
+  await user.click(screen.getByRole('button', { name: 'Save vehicle' }))
+
+  expect(
+    await screen.findByRole('heading', { name: 'Tata Nexon' }),
+  ).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledWith(
+    '/api/vehicles',
+    expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        make: 'Tata',
+        model: 'Nexon',
+        category: 'SUV',
+        price: '1499999.00',
+        quantity: 3,
+      }),
+    }),
+  )
+})
