@@ -87,3 +87,47 @@ def test_login_rejects_an_incorrect_password(
     )
 
     assert response.status_code == 401
+
+def test_me_requires_login(client: TestClient) -> None:
+    response = client.get("/api/auth/me")
+
+    assert response.status_code == 401
+
+
+def test_me_returns_current_customer(client: TestClient) -> None:
+    registration = client.post(
+        "/api/auth/register",
+        json={
+            "email": "driver@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+    login = client.post(
+        "/api/auth/login",
+        json={
+            "email": "driver@example.com",
+            "password": "SecurePass123!",
+        },
+    )
+
+    response = client.get(
+        "/api/auth/me",
+        headers={
+            "Authorization": f"Bearer {login.json()['access_token']}"
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == registration.json()
+    assert response.json()["role"] == "customer"
+    assert "password_hash" not in response.json()
+
+
+def test_me_returns_admin_role(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = client.get("/api/auth/me", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"    
