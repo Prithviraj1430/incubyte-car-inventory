@@ -105,3 +105,21 @@ def create_vehicle(
     session.commit()
     session.refresh(vehicle)
     return vehicle
+
+@router.put("/{vehicle_id}", response_model=VehicleResponse)
+def update_vehicle(
+    vehicle_id: int,
+    details: VehicleCreate,
+    session: Annotated[Session, Depends(get_session)],
+    admin: Annotated[User, Depends(require_admin)],
+) -> Vehicle:
+    vehicle = session.get(Vehicle, vehicle_id)
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    for field, value in details.model_dump().items():
+        setattr(vehicle, field, value)
+
+    session.commit()
+    session.refresh(vehicle)
+    return vehicle
