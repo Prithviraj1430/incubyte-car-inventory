@@ -13,6 +13,8 @@ export type Vehicle = {
   quantity: number
 }
 
+export type VehicleInput = Omit<Vehicle, 'id'>
+
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   let response: Response
 
@@ -75,5 +77,19 @@ export async function getCurrentUser(token: string): Promise<Account> {
 export async function listVehicles(token: string): Promise<Vehicle[]> {
   return request<Vehicle[]>('/api/vehicles', {
     headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+export async function createVehicle(
+  token: string,
+  details: VehicleInput,
+): Promise<Vehicle> {
+  return request<Vehicle>('/api/vehicles', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(details),
   })
 }

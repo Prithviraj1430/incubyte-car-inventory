@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import {
+  createVehicle,
   getCurrentUser,
   listVehicles,
   login,
   register,
   type Account,
   type Vehicle,
+  type VehicleInput,
 } from './api'
 import Dashboard from './Dashboard'
 
@@ -89,6 +91,16 @@ function App() {
     setVehicles([])
     setError('')
   }
+  async function addVehicle(details: VehicleInput): Promise<void> {
+    if (!token) {
+      throw new Error('Please sign in again.')
+    }
+
+    const created = await createVehicle(token, details)
+    setVehicles((current) => [...current, created])
+  }
+
+
 
   if (token && loading) {
     return (
@@ -101,10 +113,11 @@ function App() {
   if (account) {
     return (
       <Dashboard
-        account={account}
-        vehicles={vehicles}
-        onSignOut={signOut}
-      />
+  account={account}
+  vehicles={vehicles}
+  onSignOut={signOut}
+  onAddVehicle={addVehicle}
+/>
     )
   }
 

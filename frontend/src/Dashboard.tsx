@@ -1,9 +1,12 @@
-import type { Account, Vehicle } from './api'
+import { useState, type FormEvent } from 'react'
+
+import type { Account, Vehicle, VehicleInput } from './api'
 
 type DashboardProps = {
   account: Account
   vehicles: Vehicle[]
   onSignOut: () => void
+  onAddVehicle: (details: VehicleInput) => Promise<void>
 }
 
 const formatPrice = (price: string) =>
@@ -13,11 +16,48 @@ const formatPrice = (price: string) =>
     maximumFractionDigits: 0,
   }).format(Number(price))
 
+const inputClass =
+  'w-full rounded-xl border border-[#dce2de] bg-white px-4 py-3 text-sm outline-none focus:border-[#315d61] focus:ring-4 focus:ring-[#315d61]/10'
+
 function Dashboard({
   account,
   vehicles,
   onSignOut,
+  onAddVehicle,
 }: DashboardProps) {
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  async function submitVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const fields = new FormData(event.currentTarget)
+    const details: VehicleInput = {
+      make: String(fields.get('make') ?? '').trim(),
+      model: String(fields.get('model') ?? '').trim(),
+      category: String(fields.get('category') ?? '').trim(),
+      price: String(fields.get('price') ?? '').trim(),
+      quantity: Number(fields.get('quantity')),
+    }
+
+    setFormError('')
+    setSaving(true)
+
+    try {
+      await onAddVehicle(details)
+      setShowAddForm(false)
+    } catch (failure) {
+      setFormError(
+        failure instanceof Error
+          ? failure.message
+          : 'Could not save the vehicle.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f2f3ef] text-[#172332]">
       <header className="border-b border-[#dce2de] bg-white">
@@ -53,10 +93,114 @@ function Dashboard({
               Explore the current inventory and live stock availability.
             </p>
           </div>
-          <span className="rounded-full bg-[#e2eae6] px-4 py-2 text-xs font-semibold text-[#23505a]">
-            {account.role === 'admin' ? 'Admin access' : 'Member access'}
-          </span>
+          <div className="flex items-center gap-3">
+            {account.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormError('')
+                  setShowAddForm(true)
+                }}
+                className="rounded-full bg-[#183d45] px-5 py-3 text-sm font-semibold text-white hover:bg-[#285761]"
+              >
+                Add vehicle
+              </button>
+            )}
+            <span className="rounded-full bg-[#e2eae6] px-4 py-2 text-xs font-semibold text-[#23505a]">
+              {account.role === 'admin' ? 'Admin access' : 'Member access'}
+            </span>
+          </div>
         </div>
+
+        {showAddForm && (
+          <section className="mb-8 rounded-[28px] border border-[#dce2de] bg-white p-6 shadow-[0_15px_40px_rgba(20,42,55,0.05)] sm:p-8">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.2em] text-[#b46a49] uppercase">
+                  Admin inventory
+                </p>
+                <h2 className="mt-2 font-serif text-3xl">New vehicle</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="text-sm font-semibold text-[#68757b] hover:text-[#172332]"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <form onSubmit={submitVehicle}>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="block text-sm font-semibold">
+                  Make
+                  <input
+                    name="make"
+                    required
+                    maxLength={100}
+                    className={`${inputClass} mt-2`}
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Model
+                  <input
+                    name="model"
+                    required
+                    maxLength={100}
+                    className={`${inputClass} mt-2`}
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Category
+                  <input
+                    name="category"
+                    required
+                    maxLength={100}
+                    className={`${inputClass} mt-2`}
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Price
+                  <input
+                    name="price"
+                    inputMode="decimal"
+                    required
+                    placeholder="1499999.00"
+                    className={`${inputClass} mt-2`}
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Quantity
+                  <input
+                    name="quantity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    className={`${inputClass} mt-2`}
+                  />
+                </label>
+              </div>
+
+              {formError && (
+                <p
+                  role="alert"
+                  className="mt-5 rounded-xl bg-[#fff1ec] px-4 py-3 text-sm text-[#994d36]"
+                >
+                  {formError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="mt-7 rounded-xl bg-[#183d45] px-6 py-3.5 text-sm font-semibold text-white hover:bg-[#285761] disabled:opacity-60"
+              >
+                {saving ? 'Saving…' : 'Save vehicle'}
+              </button>
+            </form>
+          </section>
+        )}
 
         {vehicles.length === 0 ? (
           <div className="rounded-[28px] border border-[#dce2de] bg-white px-8 py-20 text-center">
