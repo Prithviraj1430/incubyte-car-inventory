@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 
 import {
   createVehicle,
+  deleteVehicle,
   getCurrentUser,
   listVehicles,
   login,
@@ -101,15 +102,13 @@ function App() {
   }
 
   async function addVehicle(details: VehicleInput): Promise<void> {
-    if (!token) {
-      throw new Error('Please sign in again.')
-    }
+    if (!token) throw new Error('Please sign in again.')
 
     const created = await createVehicle(token, details)
     setVehicles((current) => [...current, created])
   }
 
-    async function handleUpdateVehicle(
+  async function handleUpdateVehicle(
     vehicleId: number,
     details: VehicleInput,
   ): Promise<void> {
@@ -123,10 +122,17 @@ function App() {
     )
   }
 
+  async function handleDeleteVehicle(vehicleId: number): Promise<void> {
+    if (!token) throw new Error('Please sign in again.')
+
+    await deleteVehicle(token, vehicleId)
+    setVehicles((current) =>
+      current.filter((vehicle) => vehicle.id !== vehicleId),
+    )
+  }
+
   async function handlePurchase(vehicleId: number): Promise<void> {
-    if (!token) {
-      throw new Error('Please sign in again.')
-    }
+    if (!token) throw new Error('Please sign in again.')
 
     const updated = await purchaseVehicle(token, vehicleId)
     setVehicles((current) =>
@@ -137,9 +143,7 @@ function App() {
   }
 
   async function handleSearch(filters: VehicleFilters): Promise<void> {
-    if (!token) {
-      throw new Error('Please sign in again.')
-    }
+    if (!token) throw new Error('Please sign in again.')
 
     const results = await searchVehicles(token, filters)
     setVehicles(results)
@@ -147,9 +151,7 @@ function App() {
   }
 
   async function resetSearch(): Promise<void> {
-    if (!token) {
-      throw new Error('Please sign in again.')
-    }
+    if (!token) throw new Error('Please sign in again.')
 
     const inventory = await listVehicles(token)
     setVehicles(inventory)
@@ -176,6 +178,7 @@ function App() {
         onSearch={handleSearch}
         onResetSearch={resetSearch}
         onUpdateVehicle={handleUpdateVehicle}
+        onDeleteVehicle={handleDeleteVehicle}
       />
     )
   }

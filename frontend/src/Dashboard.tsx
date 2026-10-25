@@ -22,6 +22,7 @@ type DashboardProps = {
     vehicleId: number,
     details: VehicleInput,
   ) => Promise<void>
+  onDeleteVehicle: (vehicleId: number) => Promise<void>
 }
 
 const formatPrice = (price: string) =>
@@ -44,6 +45,7 @@ function Dashboard({
   onSearch,
   onResetSearch,
   onUpdateVehicle,
+  onDeleteVehicle,
 }: DashboardProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -53,6 +55,11 @@ function Dashboard({
   )
   const [purchaseError, setPurchaseError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [deleteCandidateId, setDeleteCandidateId] = useState<number | null>(
+    null,
+  )
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState('')
 
   async function purchase(vehicleId: number) {
     setPurchaseError('')
@@ -68,6 +75,24 @@ function Dashboard({
       )
     } finally {
       setPurchasePendingId(null)
+    }
+  }
+
+  async function confirmDelete(vehicleId: number) {
+    setDeleteError('')
+    setDeletingId(vehicleId)
+
+    try {
+      await onDeleteVehicle(vehicleId)
+      setDeleteCandidateId(null)
+    } catch (failure) {
+      setDeleteError(
+        failure instanceof Error
+          ? failure.message
+          : 'Could not delete the vehicle.',
+      )
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -329,6 +354,57 @@ function Dashboard({
                       }
                       onCancel={() => setEditingId(null)}
                     />
+                  )}
+
+                  {account.role === 'admin' && (
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        aria-label={`Delete ${vehicle.make} ${vehicle.model}`}
+                        onClick={() => {
+                          setDeleteError('')
+                          setDeleteCandidateId(vehicle.id)
+                        }}
+                        className="w-full rounded-xl border border-[#edc9bd] px-5 py-3 text-sm font-semibold text-[#994d36] hover:bg-[#fff1ec]"
+                      >
+                        Delete
+                      </button>
+
+                      {deleteCandidateId === vehicle.id && (
+                        <div className="mt-3 rounded-xl bg-[#fff1ec] p-4">
+                          <p className="text-sm text-[#774434]">
+                            Delete this vehicle? This action cannot be undone.
+                          </p>
+                          {deleteError && (
+                            <p
+                              role="alert"
+                              className="mt-2 text-sm text-[#994d36]"
+                            >
+                              {deleteError}
+                            </p>
+                          )}
+                          <div className="mt-4 flex gap-3">
+                            <button
+                              type="button"
+                              disabled={deletingId === vehicle.id}
+                              onClick={() => void confirmDelete(vehicle.id)}
+                              className="rounded-lg bg-[#994d36] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                            >
+                              {deletingId === vehicle.id
+                                ? 'Deleting…'
+                                : 'Confirm delete'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteCandidateId(null)}
+                              className="rounded-lg border border-[#d6b6a9] px-4 py-2 text-sm font-semibold"
+                            >
+                              Cancel deletion
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </article>

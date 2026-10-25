@@ -146,3 +146,13 @@ export async function updateVehicle(
     body: JSON.stringify(details),
   })
 }
+
+export async function deleteVehicle(
+  token: string,
+  vehicleId: number,
+): Promise<void> {
+  await request<null>(`/api/vehicles/${vehicleId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
